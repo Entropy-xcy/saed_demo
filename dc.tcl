@@ -1,16 +1,41 @@
-source /usr/project/apex/cx60/snps_lib/saed90_setup.tcl
-
 # House keeping
 set project_path $env(projdir)
+set data_dir $project_path
+set search_path $env(curr_dir)
 set search_path [format "%s%s%s" "$search_path " $project_path "/"]
-set save_path [format "%s%s" $project_path "/out"]
-define_design_lib work -path [format "%s%s" $project_path "/work"]
+set save_path [format "%s" $project_path ]
+
+# source setup90.tcl
+source $env(tech_tcl)
+
+### User Specified
+set top_module $env(top_module)
+set design_verilog $env(design_verilog)
+set clock_name $env(clock_name)
+set clock_period $env(clock_period)
+
+
+### design information
+set design $top_module 
+
+### nlib data dir
+set nlib_dir "${data_dir}/nlib"
+file mkdir $nlib_dir
+
+### library dir
+set data_dir [file normalize $data_dir]
+set nlib_dir [file normalize $nlib_dir]
+
+set_app_var sh_continue_on_error true
+set_host_options -max_cores 16
+
+define_design_lib work -path [format "%s" $project_path]
 
 # Set verilog design files and the top module
-set my_verilog_files [list DianNao.v]
-set my_toplevel DianNaoNFU
+set my_verilog_files [list ${design_verilog}]
+set my_toplevel ${top_module} 
 
-set_host_options -max_cores 16 
+set_host_options -max_cores 16
 
 # Parse, Compile and Link
 analyze -f verilog $my_verilog_files
@@ -18,10 +43,10 @@ elaborate $my_toplevel
 current_design $my_toplevel
 
 link
-check_design >  [format "%s/%s" $save_path "pre_check.dc.rpt""]
 
 # Set Clock to have period of 5 ns (200MHz frequency)
-create_clock clock -name "clock" -period 5 -name ideal_clock
+# create_clock $clock_name -name $clock_name -period $clock_period 
+###{clock_sdcs}###
 
 # Start the Logic Synthesis Process}
 uniquify
@@ -34,8 +59,7 @@ report_power >  [format "%s/%s" $save_path "power.dc.rpt"]
 check_design >  [format "%s/%s" $save_path "post_check.dc.rpt"]
 
 # Write SDC and Netlist for Placement and Route
-write_sdc [format "%s.sdc" $my_toplevel]
-write -hierarchy -format verilog -output [format "%s.netlist.v" $my_toplevel]
+write_sdc [format "%s.sdc" $design_verilog]
+write -hierarchy -format verilog -output [format "%s.netlist.v" $design_verilog]
 
 exit
-
